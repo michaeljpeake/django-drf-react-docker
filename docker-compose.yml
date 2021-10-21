@@ -1,0 +1,43 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:14.0-alpine
+    volumes:
+      - ./data/db:/var/lib/postgresql/data
+    env_file:
+      - ./.env.dev
+
+  backend:
+    build: backend
+    depends_on:
+      - db
+    command: gunicorn backend.wsgi:application --bind 0.0.0.0:8000
+    volumes:
+      - ./backend:/code
+      - static_vol:/code/staticfiles
+    env_file:
+      - ./.env.dev
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        - API_HOST=http://localhost
+    volumes:
+      - react_build:/code/build
+
+  nginx:
+    build: nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+      - frontend
+    volumes:
+      - static_vol:/var/www/django_static/
+      - react_build:/var/www/frontend/
+
+volumes:
+  static_vol:
+  react_build:
